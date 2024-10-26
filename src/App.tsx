@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useState } from "react";
 import {
 	Container,
@@ -21,7 +20,7 @@ import {
 	createTextMatrix,
 	calculateFrequencies,
 	calculateSpectrum,
-} from "./utils/matrix";
+} from "./utils";
 import { AnalysisResults } from "./types";
 
 const theme = createTheme({
@@ -50,12 +49,10 @@ function App() {
 			const textMatrix = createTextMatrix(text);
 			const frequencyData = calculateFrequencies(text);
 
-			// Создаем информационную матрицу
 			const informationMatrix = textMatrix.map((row) =>
 				row.map((char) => frequencyData[char]?.information || 0)
 			);
 
-			// Создаем последовательности для спектрального анализа
 			const rowSequence = informationMatrix.flat();
 			const columnSequence = informationMatrix[0]
 				.map((_, colIndex) => informationMatrix.map((row) => row[colIndex]))
@@ -72,7 +69,6 @@ function App() {
 			});
 		} catch (error) {
 			console.error("Error analyzing text:", error);
-			// Здесь можно добавить отображение ошибки пользователю
 		} finally {
 			setIsProcessing(false);
 		}
@@ -82,7 +78,13 @@ function App() {
 		<ThemeProvider theme={theme}>
 			<CssBaseline />
 			<Box
-				sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+				sx={{
+					width: "100vw",
+					display: "flex",
+					flexDirection: "column",
+					minHeight: "100vh",
+					bgcolor: "background.default",
+				}}
 			>
 				<AppBar position="static">
 					<Toolbar>
@@ -92,7 +94,6 @@ function App() {
 
 				<Container sx={{ mt: 4, mb: 4 }}>
 					<Grid container spacing={3}>
-						{/* Ввод текста */}
 						<Grid item xs={12}>
 							<TextField
 								fullWidth
@@ -115,21 +116,31 @@ function App() {
 							</Box>
 						</Grid>
 
-						{/* Результаты анализа */}
 						{results && (
 							<>
 								<Grid item xs={12} md={6}>
 									<TextMatrix matrix={results.textMatrix} />
 								</Grid>
-
 								<Grid item xs={12} md={6}>
 									<InformationMatrix matrix={results.informationMatrix} />
 								</Grid>
-
+								<Grid xs={12} md={6} sx={{ pl: 3, pt: 1 }}>
+									<Box sx={{ color: "text.secondary" }}>
+										Размер матрицы:{" "}
+										<Box
+											component="span"
+											sx={{
+												color: "text.primary",
+												fontWeight: 600,
+											}}
+										>
+											{`${results.textMatrix.length}×${results.textMatrix[0].length}`}
+										</Box>
+									</Box>
+								</Grid>
 								<Grid item xs={12}>
 									<FrequencyAnalysis data={results.frequencyData} />
 								</Grid>
-
 								<Grid item xs={12}>
 									<SpectralAnalysis data={results.spectrumData} />
 								</Grid>

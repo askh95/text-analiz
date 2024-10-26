@@ -1,5 +1,5 @@
-// src/components/SpectralAnalysis/Enhanced3DVisualization.tsx
-import React, { useState, useMemo } from "react"; // Добавлен useMemo
+import { useState, useMemo, MouseEvent } from "react";
+
 import {
 	Paper,
 	Typography,
@@ -7,13 +7,13 @@ import {
 	ToggleButtonGroup,
 	ToggleButton,
 	Slider,
-	FormControlLabel,
-	Switch,
 } from "@mui/material";
+
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera, Text } from "@react-three/drei";
-import { SpectrumData } from "../../types";
 import * as THREE from "three";
+
+import { SpectrumData } from "../../../types";
 
 interface Enhanced3DVisualizationProps {
 	data: SpectrumData;
@@ -33,11 +33,11 @@ const ViewModes = {
 
 type ViewModeType = (typeof ViewModes)[keyof typeof ViewModes];
 
-const SpectralSurface: React.FC<SpectralSurfaceProps> = ({
+const SpectralSurface = ({
 	data,
 	viewMode,
 	heightScale = 1,
-}) => {
+}: SpectralSurfaceProps) => {
 	const geometry = useMemo(() => {
 		const rowCount = Math.ceil(Math.sqrt(data.rowSpectrum.length));
 		const colCount = rowCount;
@@ -106,7 +106,6 @@ const SpectralSurface: React.FC<SpectralSurfaceProps> = ({
 
 			<gridHelper args={[2, 20, "grey", "grey"]} position={[0, -0.5, 0]} />
 
-			{/* Оси с подписями */}
 			{[
 				"Строчный спектр",
 				"Столбцовый спектр",
@@ -131,15 +130,14 @@ const SpectralSurface: React.FC<SpectralSurfaceProps> = ({
 	);
 };
 
-export const Enhanced3DVisualization: React.FC<
-	Enhanced3DVisualizationProps
-> = ({ data }) => {
+export const Enhanced3DVisualization = ({
+	data,
+}: Enhanced3DVisualizationProps) => {
 	const [viewMode, setViewMode] = useState<ViewModeType>(ViewModes.COMBINED);
 	const [heightScale, setHeightScale] = useState(1);
-	const [showGrid, setShowGrid] = useState(true);
 
 	const handleViewModeChange = (
-		_: React.MouseEvent<HTMLElement>,
+		_: MouseEvent<HTMLElement>,
 		newMode: ViewModeType | null
 	) => {
 		if (newMode !== null) {
@@ -165,7 +163,7 @@ export const Enhanced3DVisualization: React.FC<
 							{key === "SURFACE"
 								? "Поверхность"
 								: key === "WIREFRAME"
-								? "Каркас"
+								? ""
 								: "Комбинированный"}
 						</ToggleButton>
 					))}
@@ -181,16 +179,6 @@ export const Enhanced3DVisualization: React.FC<
 						step={0.1}
 					/>
 				</Box>
-
-				<FormControlLabel
-					control={
-						<Switch
-							checked={showGrid}
-							onChange={(e) => setShowGrid(e.target.checked)}
-						/>
-					}
-					label="Сетка"
-				/>
 			</Box>
 
 			<Box

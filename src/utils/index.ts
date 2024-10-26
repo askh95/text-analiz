@@ -1,5 +1,4 @@
-// src/utils/matrix.ts
-import { TextMatrix } from "../types";
+import { TextMatrix, FrequencyAnalysis, SpectralPoint } from "../types";
 
 export const createTextMatrix = (text: string): TextMatrix => {
 	const chars = text.split("");
@@ -18,22 +17,16 @@ export const createTextMatrix = (text: string): TextMatrix => {
 	return matrix;
 };
 
-// src/utils/frequency.ts
-import { FrequencyAnalysis } from "../types";
-
 export const calculateFrequencies = (text: string): FrequencyAnalysis => {
 	const frequencies: FrequencyAnalysis = {};
 	const total = text.length;
 
-	// Подсчет символов
 	for (const char of text) {
 		if (!frequencies[char]) {
 			frequencies[char] = { count: 0, probability: 0, information: 0 };
 		}
 		frequencies[char].count++;
 	}
-
-	// Расчет вероятностей и информации
 	Object.keys(frequencies).forEach((char) => {
 		const probability = frequencies[char].count / total;
 		frequencies[char].probability = probability;
@@ -42,9 +35,6 @@ export const calculateFrequencies = (text: string): FrequencyAnalysis => {
 
 	return frequencies;
 };
-
-// src/utils/spectrum.ts
-import { SpectralPoint } from "../types";
 
 export const calculateSpectrum = (sequence: number[]): SpectralPoint[] => {
 	return sequence.map((value, index) => ({

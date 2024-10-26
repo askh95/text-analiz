@@ -1,5 +1,3 @@
-// src/components/FrequencyAnalysis/FrequencyAnalysis.tsx
-import React from "react";
 import {
 	Paper,
 	Table,
@@ -10,19 +8,17 @@ import {
 	TableRow,
 	Typography,
 } from "@mui/material";
+
 import { FrequencyAnalysis as FrequencyAnalysisType } from "../../types";
 
 interface FrequencyAnalysisProps {
 	data: FrequencyAnalysisType;
 }
 
-export const FrequencyAnalysis: React.FC<FrequencyAnalysisProps> = ({
-	data,
-}) => {
+export const FrequencyAnalysis = ({ data }: FrequencyAnalysisProps) => {
 	const sortedEntries = Object.entries(data).sort(
 		(a, b) => b[1].count - a[1].count
 	);
-
 	return (
 		<Paper sx={{ p: 2 }}>
 			<Typography variant="h6" gutterBottom>

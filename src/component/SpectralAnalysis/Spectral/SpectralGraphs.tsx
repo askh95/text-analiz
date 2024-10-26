@@ -1,5 +1,3 @@
-// src/components/SpectralAnalysis/SpectralGraphs.tsx
-import React from "react";
 import { Paper, Typography, Box, useTheme } from "@mui/material";
 import {
 	LineChart,
@@ -11,16 +9,15 @@ import {
 	Legend,
 	ResponsiveContainer,
 } from "recharts";
-import { SpectrumData } from "../../types";
+import { SpectrumData } from "../../../types";
 
 interface SpectralGraphsProps {
 	data: SpectrumData;
 }
 
-export const SpectralGraphs: React.FC<SpectralGraphsProps> = ({ data }) => {
+export const SpectralGraphs = ({ data }: SpectralGraphsProps) => {
 	const theme = useTheme();
 
-	// Преобразуем данные для совместного отображения
 	const combinedData = data.rowSpectrum.map((point, index) => ({
 		index: point.index,
 		"Строчный спектр": point.value,

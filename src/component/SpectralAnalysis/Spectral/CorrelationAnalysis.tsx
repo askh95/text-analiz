@@ -1,27 +1,20 @@
-// src/components/SpectralAnalysis/CorrelationAnalysis.tsx
-import React from "react";
 import { Paper, Typography, Box } from "@mui/material";
-import { SpectrumData } from "../../types";
+import { SpectrumData } from "../../../types";
 
 interface CorrelationAnalysisProps {
 	data: SpectrumData;
 }
 
-export const CorrelationAnalysis: React.FC<CorrelationAnalysisProps> = ({
-	data,
-}) => {
-	// Расчет корреляции между строчным и столбцовым спектрами
+export const CorrelationAnalysis = ({ data }: CorrelationAnalysisProps) => {
 	const calculateCorrelation = () => {
 		const rowValues = data.rowSpectrum.map((point) => point.value);
 		const colValues = data.columnSpectrum.map((point) => point.value);
 
 		const n = Math.min(rowValues.length, colValues.length);
 
-		// Средние значения
 		const meanRow = rowValues.reduce((a, b) => a + b, 0) / n;
 		const meanCol = colValues.reduce((a, b) => a + b, 0) / n;
 
-		// Расчет корреляции
 		let numerator = 0;
 		let denomRow = 0;
 		let denomCol = 0;

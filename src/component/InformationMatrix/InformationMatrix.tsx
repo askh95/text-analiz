@@ -1,5 +1,3 @@
-// src/components/InformationMatrix/InformationMatrix.tsx
-import React from "react";
 import {
 	Paper,
 	Table,
@@ -9,19 +7,16 @@ import {
 	TableRow,
 	Typography,
 } from "@mui/material";
+
 import { InformationMatrix as InformationMatrixType } from "../../types";
 
 interface InformationMatrixProps {
 	matrix: InformationMatrixType;
 }
 
-export const InformationMatrix: React.FC<InformationMatrixProps> = ({
-	matrix,
-}) => {
-	// Находим максимальное значение для масштабирования цвета
+export const InformationMatrix = ({ matrix }: InformationMatrixProps) => {
 	const maxValue = Math.max(...matrix.flat());
 
-	// Функция для получения цвета ячейки
 	const getCellColor = (value: number) => {
 		const intensity = value / maxValue;
 		return `rgba(25, 118, 210, ${intensity})`;
