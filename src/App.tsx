@@ -22,11 +22,7 @@ import { TextMatrix } from "./component/TextMatrix/TextMatrix";
 import { FrequencyAnalysis } from "./component/FrequencyAnalysis/FrequencyAnalysis";
 import { InformationMatrix } from "./component/InformationMatrix/InformationMatrix";
 import { SpectralAnalysis } from "./component/SpectralAnalysis/SpectralAnalysis";
-import {
-	createTextMatrix,
-	calculateFrequencies,
-	calculateSpectrum,
-} from "./utils";
+import { createTextMatrix, calculateFrequencies } from "./utils";
 import { AnalysisResults } from "./types";
 
 const theme = createTheme({
@@ -50,7 +46,6 @@ function App() {
 
 	const handleAnalyze = () => {
 		if (!text.trim() || isProcessing) return;
-
 		setIsProcessing(true);
 
 		try {
@@ -61,18 +56,29 @@ function App() {
 				row.map((char) => frequencyData[char]?.information || 0)
 			);
 
-			const rowSequence = informationMatrix.flat();
-			const columnSequence = informationMatrix[0]
-				.map((_, colIndex) => informationMatrix.map((row) => row[colIndex]))
-				.flat();
+			const rowSequence = informationMatrix.map((row) =>
+				row.reduce((sum, val) => sum + val, 0)
+			);
+
+			const columnSequence = Array(informationMatrix[0].length)
+				.fill(0)
+				.map((_, colIndex) =>
+					informationMatrix.reduce((sum, row) => sum + (row[colIndex] || 0), 0)
+				);
 
 			setResults({
 				textMatrix,
 				informationMatrix,
 				frequencyData,
 				spectrumData: {
-					rowSpectrum: calculateSpectrum(rowSequence),
-					columnSpectrum: calculateSpectrum(columnSequence),
+					rowSpectrum: rowSequence.map((value, index) => ({
+						index,
+						value: value / informationMatrix[0].length,
+					})),
+					columnSpectrum: columnSequence.map((value, index) => ({
+						index,
+						value: value / informationMatrix.length,
+					})),
 				},
 			});
 		} catch (error) {
@@ -85,7 +91,6 @@ function App() {
 	const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		if (file) {
-			// Проверяем расширение файла
 			if (file.type !== "text/plain" && !file.name.endsWith(".txt")) {
 				alert("Пожалуйста, загрузите текстовый файл (.txt)");
 				return;

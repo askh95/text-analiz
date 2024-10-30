@@ -1,18 +1,8 @@
-import { useState, useMemo, MouseEvent } from "react";
-
-import {
-	Paper,
-	Typography,
-	Box,
-	ToggleButtonGroup,
-	ToggleButton,
-	Slider,
-} from "@mui/material";
-
+import { useState, useMemo } from "react";
+import { Paper, Typography, Box, Slider } from "@mui/material";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, Text } from "@react-three/drei";
+import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
-
 import { SpectrumData } from "../../../types";
 
 interface Enhanced3DVisualizationProps {
@@ -21,28 +11,14 @@ interface Enhanced3DVisualizationProps {
 
 interface SpectralSurfaceProps {
 	data: SpectrumData;
-	viewMode: string;
 	heightScale?: number;
 }
 
-const ViewModes = {
-	SURFACE: "surface",
-	WIREFRAME: "wireframe",
-	COMBINED: "combined",
-} as const;
-
-type ViewModeType = (typeof ViewModes)[keyof typeof ViewModes];
-
-const SpectralSurface = ({
-	data,
-	viewMode,
-	heightScale = 1,
-}: SpectralSurfaceProps) => {
+const SpectralSurface = ({ data, heightScale = 1 }: SpectralSurfaceProps) => {
 	const geometry = useMemo(() => {
-		const rowCount = Math.ceil(Math.sqrt(data.rowSpectrum.length));
-		const colCount = rowCount;
-
-		const geometry = new THREE.PlaneGeometry(1, 1, rowCount * 2, colCount * 2);
+		// Увеличиваем разрешение для более плавной поверхности
+		const resolution = 150;
+		const geometry = new THREE.PlaneGeometry(2, 2, resolution, resolution);
 		const positions = geometry.attributes.position.array as Float32Array;
 		const colors = new Float32Array(positions.length);
 
@@ -51,33 +27,77 @@ const SpectralSurface = ({
 			...data.columnSpectrum.map((p) => p.value)
 		);
 
+		// Функция для создания радиального градиента
+		const createRadialValue = (x: number, y: number) => {
+			const distance = Math.sqrt(x * x + y * y);
+			return Math.max(0, 1 - distance * 1.2);
+		};
+
+		// Функция для интерполяции спектральных данных
+		const getSpectralValue = (x: number, y: number) => {
+			const rowPos = (x + 1) * (data.rowSpectrum.length - 1) * 0.5;
+			const colPos = (y + 1) * (data.columnSpectrum.length - 1) * 0.5;
+
+			const rowIndex = Math.floor(rowPos);
+			const colIndex = Math.floor(colPos);
+
+			const rowFrac = rowPos - rowIndex;
+			const colFrac = colPos - colIndex;
+
+			// Кубическая интерполяция для еще более плавного перехода
+			const cubic = (t: number) => t * t * (3 - 2 * t);
+
+			const r1 = data.rowSpectrum[rowIndex]?.value || 0;
+			const r2 =
+				data.rowSpectrum[Math.min(rowIndex + 1, data.rowSpectrum.length - 1)]
+					?.value || 0;
+			const c1 = data.columnSpectrum[colIndex]?.value || 0;
+			const c2 =
+				data.columnSpectrum[
+					Math.min(colIndex + 1, data.columnSpectrum.length - 1)
+				]?.value || 0;
+
+			const rowValue = r1 + (r2 - r1) * cubic(rowFrac);
+			const colValue = c1 + (c2 - c1) * cubic(colFrac);
+
+			return (rowValue + colValue) / (2 * maxValue);
+		};
+
 		for (let i = 0; i < positions.length; i += 3) {
 			const x = positions[i];
 			const y = positions[i + 1];
 
-			const rowIndex = Math.floor((x + 0.5) * (rowCount - 1));
-			const colIndex = Math.floor((y + 0.5) * (colCount - 1));
+			// Комбинируем радиальный градиент со спектральными данными
+			const radialFactor = createRadialValue(x, y);
+			const spectralValue = getSpectralValue(x, y);
+			const combinedValue = spectralValue * radialFactor;
 
-			const rowValue = data.rowSpectrum[rowIndex]?.value || 0;
-			const colValue = data.columnSpectrum[colIndex]?.value || 0;
+			// Применяем нелинейное преобразование для более выраженного эффекта
+			const heightValue = Math.pow(combinedValue, 0.7) * heightScale;
+			positions[i + 2] = heightValue;
 
-			const z = ((rowValue + colValue) / maxValue) * heightScale;
-			positions[i + 2] = z;
-
-			const colorValue = z / heightScale;
+			// Создаем градиент цветов как на изображении
 			const color = new THREE.Color();
-			color.setHSL(0.7 - colorValue * 0.7, 1, 0.5);
+			const hue =
+				combinedValue < 0.3
+					? 0.6 - combinedValue * 0.5 // синий к голубому
+					: combinedValue < 0.6
+					? 0.35 - (combinedValue - 0.3) * 0.5 // голубой к желтому
+					: 0.15 - (combinedValue - 0.6) * 0.15; // желтый к красному
 
+			const saturation = 0.8 + combinedValue * 0.2;
+			const lightness = 0.3 + combinedValue * 0.4;
+
+			color.setHSL(hue, saturation, lightness);
 			colors[i] = color.r;
 			colors[i + 1] = color.g;
 			colors[i + 2] = color.b;
 		}
 
 		geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+		geometry.computeVertexNormals();
 		return geometry;
 	}, [data, heightScale]);
-
-	const gridVisible = useMemo(() => viewMode !== ViewModes.SURFACE, [viewMode]);
 
 	return (
 		<>
@@ -87,45 +107,19 @@ const SpectralSurface = ({
 					vertexColors
 					side={THREE.DoubleSide}
 					transparent
-					opacity={viewMode === ViewModes.WIREFRAME ? 0 : 0.8}
-					shininess={50}
+					opacity={0.95}
+					shininess={100}
+					specular={new THREE.Color(0x666666)}
 				/>
 			</mesh>
 
-			{gridVisible && (
-				<mesh rotation={[-Math.PI / 2, 0, 0]}>
-					<primitive object={geometry} attach="geometry" />
-					<meshBasicMaterial
-						wireframe
-						color="white"
-						transparent
-						opacity={0.3}
-					/>
-				</mesh>
-			)}
-
-			<gridHelper args={[2, 20, "grey", "grey"]} position={[0, -0.5, 0]} />
-
-			{[
-				"Строчный спектр",
-				"Столбцовый спектр",
-				"Информационная значимость",
-			].map((label, index) => (
-				<Text
-					key={label}
-					position={[
-						index === 0 ? 1.2 : 0,
-						index === 2 ? 0.7 : -0.5,
-						index === 1 ? 1.2 : 0,
-					]}
-					color="black"
-					fontSize={0.05}
-					anchorX={index === 2 ? "center" : "left"}
-					rotation={index === 1 ? [0, Math.PI / 2, 0] : undefined}
-				>
-					{label}
-				</Text>
-			))}
+			<ambientLight intensity={0.5} />
+			<pointLight position={[5, 8, 5]} intensity={0.8} />
+			<pointLight position={[-5, 3, -5]} intensity={0.6} />
+			<hemisphereLight
+				args={["#ffffff", "#bbbbff", 0.6]}
+				position={[0, 1, 0]}
+			/>
 		</>
 	);
 };
@@ -133,17 +127,7 @@ const SpectralSurface = ({
 export const Enhanced3DVisualization = ({
 	data,
 }: Enhanced3DVisualizationProps) => {
-	const [viewMode, setViewMode] = useState<ViewModeType>(ViewModes.COMBINED);
-	const [heightScale, setHeightScale] = useState(1);
-
-	const handleViewModeChange = (
-		_: MouseEvent<HTMLElement>,
-		newMode: ViewModeType | null
-	) => {
-		if (newMode !== null) {
-			setViewMode(newMode);
-		}
-	};
+	const [heightScale, setHeightScale] = useState(1.5);
 
 	return (
 		<Paper sx={{ p: 2 }}>
@@ -151,31 +135,14 @@ export const Enhanced3DVisualization = ({
 				3D визуализация спектров
 			</Typography>
 
-			<Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
-				<ToggleButtonGroup
-					value={viewMode}
-					exclusive
-					onChange={handleViewModeChange}
-					size="small"
-				>
-					{Object.entries(ViewModes).map(([key, value]) => (
-						<ToggleButton key={key} value={value}>
-							{key === "SURFACE"
-								? "Поверхность"
-								: key === "WIREFRAME"
-								? ""
-								: "Комбинированный"}
-						</ToggleButton>
-					))}
-				</ToggleButtonGroup>
-
-				<Box sx={{ width: 150 }}>
+			<Box sx={{ mb: 2 }}>
+				<Box sx={{ width: 200 }}>
 					<Typography variant="caption">Масштаб высоты</Typography>
 					<Slider
 						value={heightScale}
 						onChange={(_, value) => setHeightScale(value as number)}
 						min={0.5}
-						max={2}
+						max={2.5}
 						step={0.1}
 					/>
 				</Box>
@@ -184,49 +151,38 @@ export const Enhanced3DVisualization = ({
 			<Box
 				sx={{
 					width: "100%",
-					height: 500,
+					height: 600,
 					position: "relative",
-					bgcolor: "#f5f5f5",
+					bgcolor: "#fafafa",
 					borderRadius: 1,
 					overflow: "hidden",
 				}}
 			>
 				<Canvas>
-					<PerspectiveCamera makeDefault position={[1.5, 1.5, 1.5]} fov={50} />
-					<OrbitControls enableDamping dampingFactor={0.05} rotateSpeed={0.5} />
-
-					<ambientLight intensity={0.5} />
-					<pointLight position={[10, 10, 10]} intensity={1} />
-
-					<SpectralSurface
-						data={data}
-						viewMode={viewMode}
-						heightScale={heightScale}
+					<PerspectiveCamera
+						makeDefault
+						position={[2, 2, 2]}
+						fov={45}
+						near={0.1}
+						far={1000}
 					/>
-				</Canvas>
-			</Box>
+					<OrbitControls
+						enableDamping
+						dampingFactor={0.07}
+						rotateSpeed={0.5}
+						minDistance={1.5}
+						maxDistance={5}
+						maxPolarAngle={Math.PI / 2.1}
+					/>
 
-			<Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 2 }}>
-				<Typography variant="body2">Значение:</Typography>
-				<Box
-					sx={{
-						width: 200,
-						height: 20,
-						background: "linear-gradient(to right, blue, cyan, yellow, red)",
-					}}
-				/>
-				<Typography variant="body2" sx={{ ml: 1 }}>
-					Низкое
-				</Typography>
-				<Typography variant="body2">Высокое</Typography>
+					<SpectralSurface data={data} heightScale={heightScale} />
+				</Canvas>
 			</Box>
 
 			<Box sx={{ mt: 2, bgcolor: "grey.50", p: 2, borderRadius: 1 }}>
 				<Typography variant="body2" color="text.secondary">
 					Управление: используйте левую кнопку мыши для вращения, правую для
-					перемещения, колесико для масштабирования. Высота и цвет точек
-					показывают комбинированную информационную значимость в каждой позиции
-					текста.
+					перемещения, колесико для масштабирования.
 				</Typography>
 			</Box>
 		</Paper>

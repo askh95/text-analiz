@@ -40,15 +40,7 @@ export const SpectralGraphs = ({ data }: SpectralGraphsProps) => {
 							margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
 						>
 							<CartesianGrid strokeDasharray="3 3" />
-							<XAxis
-								dataKey="index"
-								tickFormatter={() => ""}
-								label={{
-									value: "Индекс",
-									position: "bottom",
-									style: { textAnchor: "middle" },
-								}}
-							/>
+
 							<YAxis
 								label={{
 									value: "Значение спектра (бит)",
@@ -103,15 +95,7 @@ export const SpectralGraphs = ({ data }: SpectralGraphsProps) => {
 							margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
 						>
 							<CartesianGrid strokeDasharray="3 3" />
-							<XAxis
-								dataKey="index"
-								tickFormatter={() => ""}
-								label={{
-									value: "Индекс",
-									position: "bottom",
-									style: { textAnchor: "middle" },
-								}}
-							/>
+
 							<YAxis
 								label={{
 									value: "Значение спектра (бит)",

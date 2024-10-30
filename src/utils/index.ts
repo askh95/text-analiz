@@ -1,7 +1,17 @@
 import { TextMatrix, FrequencyAnalysis, SpectralPoint } from "../types";
 
 export const createTextMatrix = (text: string): TextMatrix => {
-	const chars = text.split("");
+	const formatText = (input: string): string => {
+		let formatted = input
+			.replace(/\s+/g, " ")
+			.trim()
+			.replace(/\s+([.,!?])/g, "$1");
+
+		return formatted;
+	};
+
+	const formattedText = formatText(text);
+	const chars = formattedText.split("");
 	const size = Math.ceil(Math.sqrt(chars.length));
 	const matrix: string[][] = [];
 
