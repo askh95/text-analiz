@@ -2,7 +2,6 @@ import { Paper, Typography, Box, useTheme } from "@mui/material";
 import {
 	LineChart,
 	Line,
-	XAxis,
 	YAxis,
 	CartesianGrid,
 	Tooltip,
