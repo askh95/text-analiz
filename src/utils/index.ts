@@ -1,24 +1,31 @@
 import { TextMatrix, FrequencyAnalysis, SpectralPoint } from "../types";
 
-export const createTextMatrix = (text: string): TextMatrix => {
+export const createTextMatrix = (
+	text: string,
+	rows?: number,
+	cols?: number
+): TextMatrix => {
 	const formatText = (input: string): string => {
 		let formatted = input
 			.replace(/\s+/g, " ")
 			.trim()
 			.replace(/\s+([.,!?])/g, "$1");
-
 		return formatted;
 	};
 
 	const formattedText = formatText(text);
 	const chars = formattedText.split("");
-	const size = Math.ceil(Math.sqrt(chars.length));
+
+	const sqrt = Math.ceil(Math.sqrt(chars.length));
+	const finalRows = rows || sqrt;
+	const finalCols = cols || sqrt;
+
 	const matrix: string[][] = [];
 
-	for (let i = 0; i < size; i++) {
+	for (let i = 0; i < finalRows; i++) {
 		const row: string[] = [];
-		for (let j = 0; j < size; j++) {
-			const index = i * size + j;
+		for (let j = 0; j < finalCols; j++) {
+			const index = i * finalCols + j;
 			row.push(index < chars.length ? chars[index] : " ");
 		}
 		matrix.push(row);
@@ -27,16 +34,20 @@ export const createTextMatrix = (text: string): TextMatrix => {
 	return matrix;
 };
 
-export const calculateFrequencies = (text: string): FrequencyAnalysis => {
+export const calculateFrequencies = (matrix: TextMatrix): FrequencyAnalysis => {
 	const frequencies: FrequencyAnalysis = {};
-	const total = text.length;
+	let total = 0;
 
-	for (const char of text) {
-		if (!frequencies[char]) {
-			frequencies[char] = { count: 0, probability: 0, information: 0 };
+	for (const row of matrix) {
+		for (const char of row) {
+			if (!frequencies[char]) {
+				frequencies[char] = { count: 0, probability: 0, information: 0 };
+			}
+			frequencies[char].count++;
+			total++;
 		}
-		frequencies[char].count++;
 	}
+
 	Object.keys(frequencies).forEach((char) => {
 		const probability = frequencies[char].count / total;
 		frequencies[char].probability = probability;
@@ -46,9 +57,49 @@ export const calculateFrequencies = (text: string): FrequencyAnalysis => {
 	return frequencies;
 };
 
-export const calculateSpectrum = (sequence: number[]): SpectralPoint[] => {
-	return sequence.map((value, index) => ({
+const calculateSequenceInformation = (
+	sequence: string[],
+	frequencies: FrequencyAnalysis
+): number => {
+	return sequence.reduce((sum, char) => {
+		return sum + (frequencies[char]?.information || 0);
+	}, 0);
+};
+
+export const calculateRowSpectrum = (
+	matrix: TextMatrix,
+	frequencies: FrequencyAnalysis
+): SpectralPoint[] => {
+	return matrix.map((row, index) => ({
 		index,
-		value: Math.abs(value),
+		value: calculateSequenceInformation(row, frequencies),
+	}));
+};
+
+export const calculateColumnSpectrum = (
+	matrix: TextMatrix,
+	frequencies: FrequencyAnalysis
+): SpectralPoint[] => {
+	const cols = matrix[0].length;
+	const spectrum: SpectralPoint[] = [];
+
+	for (let j = 0; j < cols; j++) {
+		const column = matrix.map((row) => row[j]);
+		spectrum.push({
+			index: j,
+			value: calculateSequenceInformation(column, frequencies),
+		});
+	}
+
+	return spectrum;
+};
+
+export const normalizeSpectrum = (
+	spectrum: SpectralPoint[]
+): SpectralPoint[] => {
+	const maxValue = Math.max(...spectrum.map((point) => point.value));
+	return spectrum.map((point) => ({
+		index: point.index,
+		value: point.value / maxValue,
 	}));
 };

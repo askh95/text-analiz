@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
 	Container,
 	TextField,
@@ -22,8 +22,10 @@ import { TextMatrix } from "./component/TextMatrix/TextMatrix";
 import { FrequencyAnalysis } from "./component/FrequencyAnalysis/FrequencyAnalysis";
 import { InformationMatrix } from "./component/InformationMatrix/InformationMatrix";
 import { SpectralAnalysis } from "./component/SpectralAnalysis/SpectralAnalysis";
+import MatrixSizeInput from "./component/MatrixSizeInput/MatrixSizeInput";
 import { createTextMatrix, calculateFrequencies } from "./utils";
 import { AnalysisResults } from "./types";
+import _ from "lodash";
 
 const theme = createTheme({
 	components: {
@@ -42,84 +44,126 @@ function App() {
 	const [results, setResults] = useState<AnalysisResults | null>(null);
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [fileName, setFileName] = useState<string>("");
+	const [dimensions, setDimensions] = useState<{
+		rows?: number;
+		cols?: number;
+	}>({});
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const handleAnalyze = () => {
-		if (!text.trim() || isProcessing) return;
-		setIsProcessing(true);
-
-		try {
-			const textMatrix = createTextMatrix(text);
-			const frequencyData = calculateFrequencies(text);
+	const calculateResults = useMemo(
+		() => (inputText: string, rows: number, cols: number) => {
+			const textMatrix = createTextMatrix(inputText, rows, cols);
+			const frequencyData = calculateFrequencies(textMatrix);
 
 			const informationMatrix = textMatrix.map((row) =>
 				row.map((char) => frequencyData[char]?.information || 0)
 			);
 
-			const rowSequence = informationMatrix.map((row) =>
-				row.reduce((sum, val) => sum + val, 0)
-			);
+			const rowSpectrum = informationMatrix.map((row, rowIndex) => {
+				const nonEmptyValues = row.filter((val) => val > 0);
+				const sum = nonEmptyValues.reduce((acc, val) => acc + val, 0);
+				return {
+					index: rowIndex,
+					value: nonEmptyValues.length > 0 ? sum : 0,
+				};
+			});
 
-			const columnSequence = Array(informationMatrix[0].length)
+			const columnSpectrum = Array(informationMatrix[0].length)
 				.fill(0)
-				.map((_, colIndex) =>
-					informationMatrix.reduce((sum, row) => sum + (row[colIndex] || 0), 0)
-				);
+				.map((_, colIndex) => {
+					const columnValues = informationMatrix.map((row) => row[colIndex]);
+					const nonEmptyValues = columnValues.filter((val) => val > 0);
+					const sum = nonEmptyValues.reduce((acc, val) => acc + val, 0);
+					return {
+						index: colIndex,
+						value: nonEmptyValues.length > 0 ? sum : 0,
+					};
+				});
 
-			setResults({
+			return {
 				textMatrix,
 				informationMatrix,
 				frequencyData,
 				spectrumData: {
-					rowSpectrum: rowSequence.map((value, index) => ({
-						index,
-						value: value / informationMatrix[0].length,
-					})),
-					columnSpectrum: columnSequence.map((value, index) => ({
-						index,
-						value: value / informationMatrix.length,
-					})),
+					rowSpectrum,
+					columnSpectrum,
 				},
-			});
+				dimensions: { rows, cols },
+			};
+		},
+		[]
+	);
+
+	const debouncedSetText = useCallback(
+		_.debounce((value: string) => {
+			setText(value);
+		}, 0),
+		[]
+	);
+
+	const handleAnalyze = useCallback(() => {
+		if (!text.trim() || isProcessing) return;
+		setIsProcessing(true);
+
+		try {
+			const sqrt = Math.ceil(Math.sqrt(text.length));
+			const newResults = calculateResults(
+				text,
+				dimensions.rows || sqrt,
+				dimensions.cols || sqrt
+			);
+			setResults(newResults);
 		} catch (error) {
 			console.error("Error analyzing text:", error);
 		} finally {
 			setIsProcessing(false);
 		}
-	};
+	}, [text, dimensions, isProcessing, calculateResults]);
 
-	const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		if (file) {
-			if (file.type !== "text/plain" && !file.name.endsWith(".txt")) {
-				alert("Пожалуйста, загрузите текстовый файл (.txt)");
-				return;
+	const handleFileUpload = useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>) => {
+			const file = event.target.files?.[0];
+			if (file) {
+				if (file.type !== "text/plain" && !file.name.endsWith(".txt")) {
+					alert("Пожалуйста, загрузите текстовый файл (.txt)");
+					return;
+				}
+
+				setFileName(file.name);
+				const reader = new FileReader();
+
+				reader.onload = (e) => {
+					const content = e.target?.result as string;
+					debouncedSetText(content);
+				};
+
+				reader.onerror = (e) => {
+					console.error("Error reading file:", e);
+					alert("Ошибка при чтении файла");
+				};
+
+				reader.readAsText(file);
 			}
+		},
+		[debouncedSetText]
+	);
 
-			setFileName(file.name);
-			const reader = new FileReader();
-
-			reader.onload = (e) => {
-				const content = e.target?.result as string;
-				setText(content);
-			};
-
-			reader.onerror = (e) => {
-				console.error("Error reading file:", e);
-				alert("Ошибка при чтении файла");
-			};
-
-			reader.readAsText(file);
-		}
-	};
-
-	const handleClearFile = () => {
+	const handleClearFile = useCallback(() => {
 		setText("");
 		setFileName("");
 		if (fileInputRef.current) {
 			fileInputRef.current.value = "";
 		}
-	};
+	}, []);
+
+	const handleMatrixSizeChange = useCallback(
+		(type: "rows" | "cols") => (value: number | undefined) => {
+			setDimensions((prev) => ({ ...prev, [type]: value }));
+		},
+		[]
+	);
+
+	const memoizedResults = useMemo(() => results, [results]);
 
 	return (
 		<ThemeProvider theme={theme}>
@@ -188,47 +232,53 @@ function App() {
 										variant="outlined"
 										label="Введите текст для анализа или загрузите файл"
 										value={text}
-										onChange={(e) => setText(e.target.value)}
+										onChange={(e) => debouncedSetText(e.target.value)}
 										disabled={isProcessing}
 									/>
 								</Box>
+
+								<MatrixSizeInput
+									rows={dimensions.rows}
+									cols={dimensions.cols}
+									onRowsChange={handleMatrixSizeChange("rows")}
+									onColsChange={handleMatrixSizeChange("cols")}
+									isProcessing={isProcessing}
+								/>
 								<Button
 									variant="contained"
 									onClick={handleAnalyze}
 									disabled={!text.trim() || isProcessing}
+									sx={{ mt: 2 }}
 								>
 									{isProcessing ? "Анализ..." : "Анализировать"}
 								</Button>
 							</Paper>
 						</Grid>
 
-						{results && (
+						{memoizedResults && (
 							<>
 								<Grid item xs={12} md={6}>
-									<TextMatrix matrix={results.textMatrix} />
+									<TextMatrix matrix={memoizedResults.textMatrix} />
 								</Grid>
 								<Grid item xs={12} md={6}>
-									<InformationMatrix matrix={results.informationMatrix} />
+									<InformationMatrix
+										matrix={memoizedResults.informationMatrix}
+									/>
 								</Grid>
-								<Grid xs={12} md={6} sx={{ pl: 3, pt: 1 }}>
+								<Grid item xs={12} md={6}>
 									<Box sx={{ color: "text.secondary" }}>
-										Размер матрицы:{" "}
-										<Box
-											component="span"
-											sx={{
-												color: "text.primary",
-												fontWeight: 600,
-											}}
-										>
-											{`${results.textMatrix.length}×${results.textMatrix[0].length}`}
-										</Box>
+										Текущий размер матрицы: {memoizedResults.textMatrix.length}×
+										{memoizedResults.textMatrix[0].length}
 									</Box>
 								</Grid>
 								<Grid item xs={12}>
-									<FrequencyAnalysis data={results.frequencyData} />
+									<FrequencyAnalysis data={memoizedResults.frequencyData} />
 								</Grid>
 								<Grid item xs={12}>
-									<SpectralAnalysis data={results.spectrumData} />
+									<SpectralAnalysis
+										data={memoizedResults.spectrumData}
+										frequencies={memoizedResults.frequencyData}
+									/>
 								</Grid>
 							</>
 						)}

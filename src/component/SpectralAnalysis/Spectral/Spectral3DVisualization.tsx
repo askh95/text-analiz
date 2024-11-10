@@ -12,11 +12,17 @@ interface Enhanced3DVisualizationProps {
 interface SpectralSurfaceProps {
 	data: SpectrumData;
 	heightScale?: number;
+	compression?: number;
+	falloff?: number;
 }
 
-const SpectralSurface = ({ data, heightScale = 1 }: SpectralSurfaceProps) => {
+const SpectralSurface = ({
+	data,
+	heightScale = 1.5,
+	compression = 2.5,
+	falloff = 1.5,
+}: SpectralSurfaceProps) => {
 	const geometry = useMemo(() => {
-		// Увеличиваем разрешение для более плавной поверхности
 		const resolution = 150;
 		const geometry = new THREE.PlaneGeometry(2, 2, resolution, resolution);
 		const positions = geometry.attributes.position.array as Float32Array;
@@ -27,13 +33,13 @@ const SpectralSurface = ({ data, heightScale = 1 }: SpectralSurfaceProps) => {
 			...data.columnSpectrum.map((p) => p.value)
 		);
 
-		// Функция для создания радиального градиента
-		const createRadialValue = (x: number, y: number) => {
-			const distance = Math.sqrt(x * x + y * y);
-			return Math.max(0, 1 - distance * 1.2);
+		// Функция для создания формы песочных часов
+		const createHourglassShape = (x: number, y: number) => {
+			const distance = Math.sqrt(x * x + y * y) * compression;
+			const base = Math.abs(Math.sin(distance * Math.PI));
+			return base * Math.exp(-distance * falloff);
 		};
 
-		// Функция для интерполяции спектральных данных
 		const getSpectralValue = (x: number, y: number) => {
 			const rowPos = (x + 1) * (data.rowSpectrum.length - 1) * 0.5;
 			const colPos = (y + 1) * (data.columnSpectrum.length - 1) * 0.5;
@@ -43,9 +49,6 @@ const SpectralSurface = ({ data, heightScale = 1 }: SpectralSurfaceProps) => {
 
 			const rowFrac = rowPos - rowIndex;
 			const colFrac = colPos - colIndex;
-
-			// Кубическая интерполяция для еще более плавного перехода
-			const cubic = (t: number) => t * t * (3 - 2 * t);
 
 			const r1 = data.rowSpectrum[rowIndex]?.value || 0;
 			const r2 =
@@ -57,8 +60,9 @@ const SpectralSurface = ({ data, heightScale = 1 }: SpectralSurfaceProps) => {
 					Math.min(colIndex + 1, data.columnSpectrum.length - 1)
 				]?.value || 0;
 
-			const rowValue = r1 + (r2 - r1) * cubic(rowFrac);
-			const colValue = c1 + (c2 - c1) * cubic(colFrac);
+			// Линейная интерполяция
+			const rowValue = r1 + (r2 - r1) * rowFrac;
+			const colValue = c1 + (c2 - c1) * colFrac;
 
 			return (rowValue + colValue) / (2 * maxValue);
 		};
@@ -67,28 +71,22 @@ const SpectralSurface = ({ data, heightScale = 1 }: SpectralSurfaceProps) => {
 			const x = positions[i];
 			const y = positions[i + 1];
 
-			// Комбинируем радиальный градиент со спектральными данными
-			const radialFactor = createRadialValue(x, y);
+			// Комбинируем форму и спектральные данные
+			const hourglassShape = createHourglassShape(x, y);
 			const spectralValue = getSpectralValue(x, y);
-			const combinedValue = spectralValue * radialFactor;
+			const combinedValue = spectralValue * hourglassShape;
 
-			// Применяем нелинейное преобразование для более выраженного эффекта
-			const heightValue = Math.pow(combinedValue, 0.7) * heightScale;
-			positions[i + 2] = heightValue;
+			// Применяем нелинейное преобразование для более выраженной формы
+			positions[i + 2] = Math.pow(combinedValue, 0.8) * heightScale;
 
-			// Создаем градиент цветов как на изображении
+			// Цветовая схема
 			const color = new THREE.Color();
-			const hue =
-				combinedValue < 0.3
-					? 0.6 - combinedValue * 0.5 // синий к голубому
-					: combinedValue < 0.6
-					? 0.35 - (combinedValue - 0.3) * 0.5 // голубой к желтому
-					: 0.15 - (combinedValue - 0.6) * 0.15; // желтый к красному
+			color.setHSL(
+				0.6 - combinedValue * 0.5, // От синего к зеленому
+				0.7 + combinedValue * 0.3, // Увеличиваем насыщенность с высотой
+				0.3 + combinedValue * 0.4 // Увеличиваем яркость с высотой
+			);
 
-			const saturation = 0.8 + combinedValue * 0.2;
-			const lightness = 0.3 + combinedValue * 0.4;
-
-			color.setHSL(hue, saturation, lightness);
 			colors[i] = color.r;
 			colors[i + 1] = color.g;
 			colors[i + 2] = color.b;
@@ -97,7 +95,7 @@ const SpectralSurface = ({ data, heightScale = 1 }: SpectralSurfaceProps) => {
 		geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 		geometry.computeVertexNormals();
 		return geometry;
-	}, [data, heightScale]);
+	}, [data, heightScale, compression, falloff]);
 
 	return (
 		<>
@@ -128,19 +126,42 @@ export const Enhanced3DVisualization = ({
 	data,
 }: Enhanced3DVisualizationProps) => {
 	const [heightScale, setHeightScale] = useState(1.5);
+	const [compression, setCompression] = useState(2.5);
+	const [falloff, setFalloff] = useState(1.5);
 
 	return (
 		<Paper sx={{ p: 2 }}>
 			<Typography variant="h6" gutterBottom>
-				3D визуализация спектров
+				3D нейролингвистический информационный образ источника текстовой
+				информации
 			</Typography>
 
-			<Box sx={{ mb: 2 }}>
+			<Box sx={{ display: "flex", gap: 4, mb: 2 }}>
 				<Box sx={{ width: 200 }}>
 					<Typography variant="caption">Масштаб высоты</Typography>
 					<Slider
 						value={heightScale}
 						onChange={(_, value) => setHeightScale(value as number)}
+						min={0.5}
+						max={2.5}
+						step={0.1}
+					/>
+				</Box>
+				<Box sx={{ width: 200 }}>
+					<Typography variant="caption">Сжатие</Typography>
+					<Slider
+						value={compression}
+						onChange={(_, value) => setCompression(value as number)}
+						min={1}
+						max={4}
+						step={0.1}
+					/>
+				</Box>
+				<Box sx={{ width: 200 }}>
+					<Typography variant="caption">Затухание</Typography>
+					<Slider
+						value={falloff}
+						onChange={(_, value) => setFalloff(value as number)}
 						min={0.5}
 						max={2.5}
 						step={0.1}
@@ -175,7 +196,12 @@ export const Enhanced3DVisualization = ({
 						maxPolarAngle={Math.PI / 2.1}
 					/>
 
-					<SpectralSurface data={data} heightScale={heightScale} />
+					<SpectralSurface
+						data={data}
+						heightScale={heightScale}
+						compression={compression}
+						falloff={falloff}
+					/>
 				</Canvas>
 			</Box>
 
@@ -188,3 +214,5 @@ export const Enhanced3DVisualization = ({
 		</Paper>
 	);
 };
+
+export default Enhanced3DVisualization;

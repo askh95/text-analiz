@@ -1,13 +1,15 @@
 import {
-	Paper,
 	Table,
 	TableBody,
 	TableCell,
 	TableContainer,
 	TableRow,
 	Typography,
+	Accordion,
+	AccordionSummary,
+	AccordionDetails,
 } from "@mui/material";
-
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { TextMatrix as TextMatrixType } from "../../types";
 
 interface TextMatrixProps {
@@ -16,11 +18,17 @@ interface TextMatrixProps {
 
 export const TextMatrix = ({ matrix }: TextMatrixProps) => {
 	return (
-		<>
-			<Paper sx={{ p: 2 }}>
-				<Typography variant="h6" gutterBottom>
-					Текстовая матрица
+		<Accordion defaultExpanded={false}>
+			<AccordionSummary
+				expandIcon={<ExpandMoreIcon />}
+				aria-controls="text-matrix-content"
+				id="text-matrix-header"
+			>
+				<Typography variant="h6">
+					Текстовый нейролингвистический кадр
 				</Typography>
+			</AccordionSummary>
+			<AccordionDetails>
 				<TableContainer>
 					<Table size="small">
 						<TableBody>
@@ -44,7 +52,7 @@ export const TextMatrix = ({ matrix }: TextMatrixProps) => {
 						</TableBody>
 					</Table>
 				</TableContainer>
-			</Paper>
-		</>
+			</AccordionDetails>
+		</Accordion>
 	);
 };

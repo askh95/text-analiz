@@ -3,6 +3,7 @@ import {
 	LineChart,
 	Line,
 	YAxis,
+	XAxis,
 	CartesianGrid,
 	Tooltip,
 	ResponsiveContainer,
@@ -16,41 +17,60 @@ interface SpectralGraphsProps {
 export const SpectralGraphs = ({ data }: SpectralGraphsProps) => {
 	const theme = useTheme();
 
-	const rowData = data.rowSpectrum.map((point) => ({
-		index: point.index,
-		value: point.value,
+	const adjustedColumnSpectrum = data.columnSpectrum.map((point) => ({
+		...point,
+		index: point.index + 1,
 	}));
 
-	const columnData = data.columnSpectrum.map((point) => ({
-		index: point.index,
-		value: point.value,
+	const adjustedRowSpectrum = data.rowSpectrum.map((point) => ({
+		...point,
+		index: point.index + 1,
 	}));
+
+	const calculateStats = (spectrum: { index: number; value: number }[]) => {
+		const values = spectrum.map((p) => p.value);
+		const nonEmptyValues = values.filter((v) => v > 0);
+		const max = Math.max(...values);
+		const min = Math.min(...nonEmptyValues);
+		const avg =
+			nonEmptyValues.length > 0
+				? nonEmptyValues.reduce((acc, val) => acc + val, 0) /
+				  nonEmptyValues.length
+				: 0;
+
+		return {
+			max: max.toFixed(3),
+			min: min.toFixed(3),
+			avg: avg.toFixed(3),
+		};
+	};
+
+	const rowStats = calculateStats(data.rowSpectrum);
+	const colStats = calculateStats(data.columnSpectrum);
 
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
 			<Paper sx={{ p: 2 }}>
 				<Typography variant="h6" gutterBottom>
-					Вертикальный информационный спектр
+					Спектр вертикальной развертки нейролингвистического информационного
+					кадра
 				</Typography>
 				<Box sx={{ width: "100%", height: 300 }}>
-					<ResponsiveContainer>
+					<ResponsiveContainer width="100%" height="100%">
 						<LineChart
-							data={columnData}
-							margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+							data={adjustedColumnSpectrum}
+							margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
 						>
 							<CartesianGrid strokeDasharray="3 3" />
-
+							<XAxis dataKey="index" tick={false} axisLine={true} />
 							<YAxis
-								label={{
-									value: "Значение спектра (бит)",
-									angle: -90,
-									position: "insideLeft",
-									style: { textAnchor: "middle" },
-								}}
+								tick={{ fontSize: 12 }}
+								tickFormatter={(value) => value.toFixed(2)}
+								domain={[Number(colStats.min), Number(colStats.max)]}
 							/>
 							<Tooltip
 								formatter={(value: number) => value.toFixed(3)}
-								labelFormatter={(label) => `Индекс: ${label}`}
+								labelFormatter={(label) => `Столбец ${label}`}
 							/>
 							<Line
 								type="natural"
@@ -58,54 +78,44 @@ export const SpectralGraphs = ({ data }: SpectralGraphsProps) => {
 								stroke={theme.palette.primary.main}
 								dot={false}
 								strokeWidth={2}
-								activeDot={{ r: 4 }}
-								isAnimationActive={true}
-								animationDuration={1000}
-								animationEasing="ease-in-out"
 							/>
 						</LineChart>
 					</ResponsiveContainer>
 				</Box>
 
 				<Box sx={{ mt: 2 }}>
-					<Typography variant="subtitle2">Статистика:</Typography>
-					<Typography variant="body2">
-						Макс. значение:{" "}
-						{Math.max(...data.columnSpectrum.map((p) => p.value)).toFixed(3)}
+					<Typography variant="subtitle1">
+						Статистика вертикального спектра:
 					</Typography>
+					<Typography variant="body2">Максимум: {colStats.max} /бит</Typography>
+					<Typography variant="body2">Минимум: {colStats.min} /бит</Typography>
 					<Typography variant="body2">
-						Ср. значение:{" "}
-						{(
-							data.columnSpectrum.reduce((acc, p) => acc + p.value, 0) /
-							data.columnSpectrum.length
-						).toFixed(3)}
+						Среднее значение: {colStats.avg} /бит
 					</Typography>
 				</Box>
 			</Paper>
 
 			<Paper sx={{ p: 2 }}>
 				<Typography variant="h6" gutterBottom>
-					Горизонтальный информационный спектр
+					Спектр горизонтальной развертки нейролингвистического информационного
+					кадра
 				</Typography>
 				<Box sx={{ width: "100%", height: 300 }}>
-					<ResponsiveContainer>
+					<ResponsiveContainer width="100%" height="100%">
 						<LineChart
-							data={rowData}
-							margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+							data={adjustedRowSpectrum}
+							margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
 						>
 							<CartesianGrid strokeDasharray="3 3" />
-
+							<XAxis dataKey="index" tick={false} axisLine={true} />
 							<YAxis
-								label={{
-									value: "Значение спектра (бит)",
-									angle: -90,
-									position: "insideLeft",
-									style: { textAnchor: "middle" },
-								}}
+								tick={{ fontSize: 12 }}
+								tickFormatter={(value) => value.toFixed(2)}
+								domain={[Number(rowStats.min), Number(rowStats.max)]}
 							/>
 							<Tooltip
 								formatter={(value: number) => value.toFixed(3)}
-								labelFormatter={(label) => `Индекс: ${label}`}
+								labelFormatter={(label) => `Строка ${label}`}
 							/>
 							<Line
 								type="monotone"
@@ -119,28 +129,15 @@ export const SpectralGraphs = ({ data }: SpectralGraphsProps) => {
 				</Box>
 
 				<Box sx={{ mt: 2 }}>
-					<Typography variant="subtitle2">Статистика:</Typography>
-					<Typography variant="body2">
-						Макс. значение:{" "}
-						{Math.max(...data.rowSpectrum.map((p) => p.value)).toFixed(3)}
+					<Typography variant="subtitle1">
+						Статистика горизонтального спектра:
 					</Typography>
+					<Typography variant="body2">Максимум: {rowStats.max} /бит</Typography>
+					<Typography variant="body2">Минимум: {rowStats.min} /бит</Typography>
 					<Typography variant="body2">
-						Ср. значение:{" "}
-						{(
-							data.rowSpectrum.reduce((acc, p) => acc + p.value, 0) /
-							data.rowSpectrum.length
-						).toFixed(3)}
+						Среднее значение: {rowStats.avg} /бит
 					</Typography>
 				</Box>
-			</Paper>
-
-			<Paper sx={{ p: 2, bgcolor: "background.default" }}>
-				<Typography variant="body2" color="text.secondary">
-					Графики показывают распределение информационной значимости в тексте:
-					горизонтальный спектр отражает строчные закономерности, а вертикальный
-					- столбцовые. Каждый график теперь представлен отдельно для более
-					детального анализа.
-				</Typography>
 			</Paper>
 		</Box>
 	);
