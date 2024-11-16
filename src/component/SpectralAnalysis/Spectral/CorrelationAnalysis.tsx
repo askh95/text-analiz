@@ -51,7 +51,7 @@ export const CorrelationAnalysis = ({
 						Энтропия: {entropy.toFixed(2)} бит
 					</Typography>
 					<Typography variant="body2">
-						Абсолютная избыточность: {absoluteRedundancy.toFixed(2)} бит
+						Избыточность: {absoluteRedundancy.toFixed(2)} бит
 					</Typography>
 
 					<Typography

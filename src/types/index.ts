@@ -32,5 +32,5 @@ export interface AnalysisResults {
 	informationMatrix: InformationMatrix;
 	frequencyData: FrequencyAnalysis;
 	spectrumData: SpectrumData;
-	dimensions?: MatrixDimensions; // Заменяем matrixSize на dimensions
+	dimensions?: MatrixDimensions;
 }

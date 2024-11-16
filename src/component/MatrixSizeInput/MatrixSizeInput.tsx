@@ -31,7 +31,7 @@ const MatrixSizeInput: React.FC<MatrixSizeInputProps> = ({
 	return (
 		<Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
 			<TextField
-				label="Строки (N)"
+				label="Строки"
 				type="text"
 				value={rows || ""}
 				onChange={handleRowsChange}
@@ -44,7 +44,7 @@ const MatrixSizeInput: React.FC<MatrixSizeInputProps> = ({
 			/>
 			<Typography variant="h6">×</Typography>
 			<TextField
-				label="Столбцы (M)"
+				label="Столбцы"
 				type="text"
 				value={cols || ""}
 				onChange={handleColsChange}

@@ -23,6 +23,7 @@ import { FrequencyAnalysis } from "./component/FrequencyAnalysis/FrequencyAnalys
 import { InformationMatrix } from "./component/InformationMatrix/InformationMatrix";
 import { SpectralAnalysis } from "./component/SpectralAnalysis/SpectralAnalysis";
 import MatrixSizeInput from "./component/MatrixSizeInput/MatrixSizeInput";
+import { TextComparison } from "./component/TextComparisonModal/TextComparisonModal";
 import { createTextMatrix, calculateFrequencies } from "./utils";
 import { AnalysisResults } from "./types";
 import _ from "lodash";
@@ -44,6 +45,8 @@ function App() {
 	const [results, setResults] = useState<AnalysisResults | null>(null);
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [fileName, setFileName] = useState<string>("");
+	const [comparisonOpen, setComparisonOpen] = useState(false);
+
 	const [dimensions, setDimensions] = useState<{
 		rows?: number;
 		cols?: number;
@@ -180,7 +183,7 @@ function App() {
 				<AppBar position="static">
 					<Toolbar>
 						<Typography variant="h6">
-							Информационный анализатор нейролингвистический текстовой
+							Информационный анализатор нейролингвистической текстовой
 							идентификации
 						</Typography>
 					</Toolbar>
@@ -194,7 +197,9 @@ function App() {
 									<Typography variant="h6" gutterBottom>
 										Ввод текста
 									</Typography>
-									<Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+									<Box
+										sx={{ display: "flex", justifyContent: "space-between" }}
+									>
 										<Button
 											variant="outlined"
 											component="label"
@@ -208,6 +213,12 @@ function App() {
 												onChange={handleFileUpload}
 												ref={fileInputRef}
 											/>
+										</Button>
+										<Button
+											variant="contained"
+											onClick={() => setComparisonOpen(true)}
+										>
+											Сравнить тексты
 										</Button>
 										{fileName && (
 											<Box
@@ -267,7 +278,7 @@ function App() {
 								</Grid>
 								<Grid item xs={12} md={6}>
 									<Box sx={{ color: "text.secondary" }}>
-										Текущий размер матрицы: {memoizedResults.textMatrix.length}×
+										Текущий размер кадра: {memoizedResults.textMatrix.length}×
 										{memoizedResults.textMatrix[0].length}
 									</Box>
 								</Grid>
@@ -285,6 +296,11 @@ function App() {
 					</Grid>
 				</Container>
 			</Box>
+			<TextComparison
+				open={comparisonOpen}
+				onClose={() => setComparisonOpen(false)}
+				calculateResults={calculateResults}
+			/>
 		</ThemeProvider>
 	);
 }

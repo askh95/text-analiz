@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
-import { Paper, Typography, Box, Slider } from "@mui/material";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Paper, Typography, Box, Slider, Button } from "@mui/material";
+import { Canvas, useThree } from "@react-three/fiber";
+import { OrbitControls, PerspectiveCamera, Text } from "@react-three/drei";
 import * as THREE from "three";
+import DownloadIcon from "@mui/icons-material/Download";
 import { SpectrumData } from "../../../types";
 
 interface Enhanced3DVisualizationProps {
@@ -15,6 +16,90 @@ interface SpectralSurfaceProps {
 	compression?: number;
 	falloff?: number;
 }
+
+const GridWithLabels = () => {
+	return (
+		<>
+			<gridHelper
+				args={[4, 20]}
+				position={[0, -0.01, 0]}
+				rotation={[0, 0, 0]}
+			/>
+
+			{Array.from({ length: 5 }).map((_, i) => (
+				<group key={i}>
+					<Text
+						position={[i - 2, -0.2, -2]}
+						rotation={[-Math.PI / 2, 0, 0]}
+						fontSize={0.15}
+						color="black"
+					>
+						{(i * 0.5).toFixed(1)}
+					</Text>
+					<Text
+						position={[-2, -0.2, i - 2]}
+						rotation={[-Math.PI / 2, 0, 0]}
+						fontSize={0.15}
+						color="black"
+					>
+						{(i * 0.5).toFixed(1)}
+					</Text>
+				</group>
+			))}
+
+			<Text
+				position={[2.5, -0.2, -2]}
+				rotation={[-Math.PI / 2, 0, 0]}
+				fontSize={0.2}
+				color="black"
+			>
+				X
+			</Text>
+			<Text
+				position={[-2, -0.2, 2.5]}
+				rotation={[-Math.PI / 2, 0, 0]}
+				fontSize={0.2}
+				color="black"
+			>
+				Z
+			</Text>
+		</>
+	);
+};
+
+const getColorFromSpectrum = (value: number) => {
+	const spectrum = [
+		{ pos: 0.0, color: new THREE.Color(0x00ffff) }, // Голубой
+		{ pos: 0.1, color: new THREE.Color(0x0080ff) }, // Светло-синий
+		{ pos: 0.2, color: new THREE.Color(0x0040ff) }, // Синий
+		{ pos: 0.3, color: new THREE.Color(0x8000ff) }, // Фиолетовый
+		{ pos: 0.4, color: new THREE.Color(0xff00ff) }, // Пурпурный
+		{ pos: 0.5, color: new THREE.Color(0xff0080) }, // Розовый
+		{ pos: 0.6, color: new THREE.Color(0xff8000) }, // Оранжевый
+		{ pos: 0.7, color: new THREE.Color(0xff4000) }, // Светло-красный
+		{ pos: 0.8, color: new THREE.Color(0xff0000) }, // Красный
+	];
+
+	// Находим подходящий сегмент спектра
+	for (let i = 0; i < spectrum.length - 1; i++) {
+		if (value >= spectrum[i].pos && value <= spectrum[i + 1].pos) {
+			const t =
+				(value - spectrum[i].pos) / (spectrum[i + 1].pos - spectrum[i].pos);
+			const color = new THREE.Color();
+			color.r =
+				spectrum[i].color.r +
+				(spectrum[i + 1].color.r - spectrum[i].color.r) * t;
+			color.g =
+				spectrum[i].color.g +
+				(spectrum[i + 1].color.g - spectrum[i].color.g) * t;
+			color.b =
+				spectrum[i].color.b +
+				(spectrum[i + 1].color.b - spectrum[i].color.b) * t;
+			return color;
+		}
+	}
+	return spectrum[spectrum.length - 1].color;
+};
 
 const SpectralSurface = ({
 	data,
@@ -33,7 +118,6 @@ const SpectralSurface = ({
 			...data.columnSpectrum.map((p) => p.value)
 		);
 
-		// Функция для создания формы песочных часов
 		const createHourglassShape = (x: number, y: number) => {
 			const distance = Math.sqrt(x * x + y * y) * compression;
 			const base = Math.abs(Math.sin(distance * Math.PI));
@@ -60,7 +144,6 @@ const SpectralSurface = ({
 					Math.min(colIndex + 1, data.columnSpectrum.length - 1)
 				]?.value || 0;
 
-			// Линейная интерполяция
 			const rowValue = r1 + (r2 - r1) * rowFrac;
 			const colValue = c1 + (c2 - c1) * colFrac;
 
@@ -71,21 +154,13 @@ const SpectralSurface = ({
 			const x = positions[i];
 			const y = positions[i + 1];
 
-			// Комбинируем форму и спектральные данные
 			const hourglassShape = createHourglassShape(x, y);
 			const spectralValue = getSpectralValue(x, y);
 			const combinedValue = spectralValue * hourglassShape;
 
-			// Применяем нелинейное преобразование для более выраженной формы
 			positions[i + 2] = Math.pow(combinedValue, 0.8) * heightScale;
 
-			// Цветовая схема
-			const color = new THREE.Color();
-			color.setHSL(
-				0.6 - combinedValue * 0.5, // От синего к зеленому
-				0.7 + combinedValue * 0.3, // Увеличиваем насыщенность с высотой
-				0.3 + combinedValue * 0.4 // Увеличиваем яркость с высотой
-			);
+			const color = getColorFromSpectrum(combinedValue);
 
 			colors[i] = color.r;
 			colors[i + 1] = color.g;
@@ -111,6 +186,8 @@ const SpectralSurface = ({
 				/>
 			</mesh>
 
+			<GridWithLabels />
+
 			<ambientLight intensity={0.5} />
 			<pointLight position={[5, 8, 5]} intensity={0.8} />
 			<pointLight position={[-5, 3, -5]} intensity={0.6} />
@@ -122,12 +199,42 @@ const SpectralSurface = ({
 	);
 };
 
+const Capture = ({ onCapture }: { onCapture: (dataUrl: string) => void }) => {
+	const { gl, scene, camera } = useThree();
+
+	useEffect(() => {
+		const capture = () => {
+			gl.render(scene, camera);
+			const dataUrl = gl.domElement.toDataURL("image/png");
+			onCapture(dataUrl);
+		};
+		requestAnimationFrame(capture);
+	}, [gl, scene, camera, onCapture]);
+
+	return null;
+};
+
 export const Enhanced3DVisualization = ({
 	data,
 }: Enhanced3DVisualizationProps) => {
 	const [heightScale, setHeightScale] = useState(1.5);
 	const [compression, setCompression] = useState(2.5);
 	const [falloff, setFalloff] = useState(1.5);
+	const [isCapturing, setIsCapturing] = useState(false);
+
+	const handleDownload = useCallback(() => {
+		setIsCapturing(true);
+	}, []);
+
+	const handleCapture = useCallback((dataUrl: string) => {
+		const link = document.createElement("a");
+		link.href = dataUrl;
+		link.download = "visualization.bmp";
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		setIsCapturing(false);
+	}, []);
 
 	return (
 		<Paper sx={{ p: 2 }}>
@@ -195,21 +302,36 @@ export const Enhanced3DVisualization = ({
 						maxDistance={5}
 						maxPolarAngle={Math.PI / 2.1}
 					/>
-
 					<SpectralSurface
 						data={data}
 						heightScale={heightScale}
 						compression={compression}
 						falloff={falloff}
 					/>
+					{isCapturing && <Capture onCapture={handleCapture} />}
 				</Canvas>
 			</Box>
 
-			<Box sx={{ mt: 2, bgcolor: "grey.50", p: 2, borderRadius: 1 }}>
+			<Box
+				sx={{
+					mt: 2,
+					display: "flex",
+					justifyContent: "space-between",
+					alignItems: "center",
+				}}
+			>
 				<Typography variant="body2" color="text.secondary">
 					Управление: используйте левую кнопку мыши для вращения, правую для
 					перемещения, колесико для масштабирования.
 				</Typography>
+				<Button
+					variant="contained"
+					startIcon={<DownloadIcon />}
+					onClick={handleDownload}
+					disabled={isCapturing}
+				>
+					{isCapturing ? "Скачивание..." : "Cкачать в формате BMP"}
+				</Button>
 			</Box>
 		</Paper>
 	);
