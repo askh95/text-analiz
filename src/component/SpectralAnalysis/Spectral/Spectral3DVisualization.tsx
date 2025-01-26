@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { FC, useMemo } from "react";
+import { useMemo } from "react";
 import Plot from "react-plotly.js";
 import { Paper, Typography, Box } from "@mui/material";
 import { SpectrumData } from "../../../types";
@@ -8,7 +7,7 @@ interface SpectralSurfaceProps {
 	data: SpectrumData;
 }
 
-export const Enhanced3DVisualization: FC<SpectralSurfaceProps> = ({ data }) => {
+export const Enhanced3DVisualization = ({ data }: SpectralSurfaceProps) => {
 	const maxValue = useMemo(
 		() =>
 			Math.max(
@@ -19,58 +18,51 @@ export const Enhanced3DVisualization: FC<SpectralSurfaceProps> = ({ data }) => {
 	);
 
 	const generateData = useMemo(() => {
-		const size = 100;
-		const x = Array(size)
+		const size = 101;
+		const x: number[][] = Array(size)
 			.fill(0)
 			.map(() => Array(size).fill(0));
-		const y = Array(size)
+		const y: number[][] = Array(size)
 			.fill(0)
 			.map(() => Array(size).fill(0));
-		const z = Array(size)
+		const z: number[][] = Array(size)
 			.fill(0)
 			.map(() => Array(size).fill(0));
 
-		const maxRadius = 4;
-		const length = 10;
+		const maxRadius = Math.max(
+			2,
+			Math.min(4, (data.rowSpectrum.length + data.columnSpectrum.length) / 100)
+		);
+		const length = maxRadius * 2;
 		const angleY = (0 * Math.PI) / 180;
 		const angleZ = (100 * Math.PI) / 180;
 
-		const getSpectralValue = (theta: number, l: number) => {
-			const rowPos =
-				(Math.cos(theta) + 1) * (data.rowSpectrum.length - 1) * 0.5;
-			const colPos = (l / 5 + 1) * (data.columnSpectrum.length - 1) * 0.5;
-
-			const rowIndex = Math.floor(rowPos);
-			const colIndex = Math.floor(colPos);
-
-			const r1 = data.rowSpectrum[rowIndex]?.value || 0;
-			const r2 =
-				data.rowSpectrum[Math.min(rowIndex + 1, data.rowSpectrum.length - 1)]
-					?.value || 0;
-			const c1 = data.columnSpectrum[colIndex]?.value || 0;
-			const c2 =
-				data.columnSpectrum[
-					Math.min(colIndex + 1, data.columnSpectrum.length - 1)
-				]?.value || 0;
-
-			const rowValue = r1 + (r2 - r1) * (rowPos - rowIndex);
-			const colValue = c1 + (c2 - c1) * (colPos - colIndex);
-
-			return (rowValue + colValue) / (2 * maxValue);
-		};
-
-		const getHourglassRadius = (height: number) => {
+		const getHourglassRadius = (
+			height: number,
+			rowIndex: number,
+			colIndex: number
+		): number => {
 			const h = height / (length / 2);
-			return maxRadius * (0.3 + Math.abs(h));
+			const minRadius = 0.1;
+			const baseRadius =
+				maxRadius * (minRadius + (1 - minRadius) * Math.pow(Math.abs(h), 0.8));
+
+			const rowValue = data.rowSpectrum[rowIndex]?.value || 0;
+			const colValue = data.columnSpectrum[colIndex]?.value || 0;
+			const avgValue = (rowValue + colValue) / 2;
+
+			return baseRadius * (1 + avgValue / (maxValue * 2));
 		};
 
 		for (let i = 0; i < size; i++) {
 			for (let j = 0; j < size; j++) {
-				const theta = (i / size) * 2 * Math.PI;
-				const l = (j / size) * length - length / 2;
+				const rowIndex = Math.floor((i / size) * data.rowSpectrum.length);
+				const colIndex = Math.floor((j / size) * data.columnSpectrum.length);
 
-				const spectralValue = getSpectralValue(theta, l);
-				const currentRadius = getHourglassRadius(l) * spectralValue;
+				const theta = (i / (size - 1)) * 2 * Math.PI;
+				const l = (j / (size - 1)) * length - length / 2;
+
+				const currentRadius = getHourglassRadius(l, rowIndex, colIndex);
 
 				const baseX = l;
 				const baseY = currentRadius * Math.cos(theta);
@@ -86,10 +78,11 @@ export const Enhanced3DVisualization: FC<SpectralSurfaceProps> = ({ data }) => {
 			}
 		}
 
-		return [x, y, z];
+		const range = [-length, length];
+		return { x, y, z, range } as const;
 	}, [data, maxValue]);
 
-	const [surfaceX, surfaceY, surfaceZ] = generateData;
+	const { x: surfaceX, y: surfaceY, z: surfaceZ, range } = generateData;
 
 	return (
 		<Paper sx={{ p: 2 }}>
@@ -115,17 +108,12 @@ export const Enhanced3DVisualization: FC<SpectralSurfaceProps> = ({ data }) => {
 							y: surfaceY,
 							z: surfaceZ,
 							colorscale: "Jet",
-							contours: {
-								z: {
-									show: true,
-									usecolormap: true,
-									highlightcolor: "#42f462",
-								},
-							},
+							showscale: true,
+							connectgaps: true,
+							hoverongaps: true,
 						},
 					]}
 					layout={{
-						title: "Hourglass Surface",
 						autosize: true,
 						width: 800,
 						height: 600,
@@ -133,11 +121,12 @@ export const Enhanced3DVisualization: FC<SpectralSurfaceProps> = ({ data }) => {
 							camera: {
 								eye: { x: 1.5, y: 1.5, z: 1 },
 								up: { x: 0, y: 0, z: 1 },
+								center: { x: 0, y: 0, z: 0 },
 							},
 							aspectratio: { x: 1, y: 1, z: 1 },
-							xaxis: { range: [-8, 8] },
-							yaxis: { range: [-8, 8] },
-							zaxis: { range: [-8, 8] },
+							xaxis: { range },
+							yaxis: { range },
+							zaxis: { range },
 						},
 					}}
 					useResizeHandler={true}
