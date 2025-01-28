@@ -1,3 +1,4 @@
+// src/types/index.ts
 export interface FrequencyData {
 	count: number;
 	probability: number;
