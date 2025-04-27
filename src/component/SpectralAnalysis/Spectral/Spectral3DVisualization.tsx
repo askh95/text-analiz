@@ -113,77 +113,69 @@ export const Enhanced3DVisualization = ({ data }: SpectralSurfaceProps) => {
 	const { x: surfaceX, y: surfaceY, z: surfaceZ, colors, range } = generateData;
 
 	return (
-		<Paper sx={{ p: 2 }}>
+		<Paper
+			sx={{
+				p: 1,
+				display: "flex",
+				flexDirection: "column",
+				justifyContent: "center",
+				alignItems: "center",
+			}}
+		>
 			<Typography variant="h6" gutterBottom>
 				3D нейролингвистический информационный образ источника текстовой
 				информации
 			</Typography>
 
-			<Box
-				sx={{
+			<Plot
+				data={[
+					{
+						type: "surface",
+						x: surfaceX,
+						y: surfaceY,
+						z: surfaceZ,
+						colorscale: colorscale,
+						intensity: colors,
+						showscale: false,
+						connectgaps: true,
+						hoverongaps: true,
+						colorbar: {
+							titlefont: { size: 14 },
+							tickfont: { size: 12 },
+							len: 0.75,
+						},
+						lighting: {
+							ambient: 0.6,
+							diffuse: 0.8,
+							fresnel: 0.2,
+							specular: 0.5,
+							roughness: 0.5,
+						},
+						contours: {
+							x: { show: false },
+							y: { show: false },
+							z: { show: true, usecolormap: true, project: { z: false } },
+						},
+					},
+				]}
+				layout={{
+					autosize: true,
 					width: "100%",
-					height: 600,
-					bgcolor: "#fafafa",
-					borderRadius: 1,
-					overflow: "hidden",
+					height: 900,
+					scene: {
+						camera: {
+							eye: { x: 1.5, y: 1.5, z: 1 },
+							up: { x: 0, y: 0, z: 1 },
+							center: { x: 0, y: 0, z: 0 },
+						},
+						aspectratio: { x: 1, y: 1, z: 1 },
+						xaxis: { range },
+						yaxis: { range },
+						zaxis: { range },
+					},
 				}}
-			>
-				<Plot
-					data={[
-						{
-							type: "surface",
-							x: surfaceX,
-							y: surfaceY,
-							z: surfaceZ,
-							colorscale: colorscale,
-							intensity: colors,
-							showscale: true,
-							connectgaps: true,
-							hoverongaps: true,
-							colorbar: {
-								titlefont: { size: 14 },
-								tickfont: { size: 12 },
-								len: 0.75,
-							},
-							lighting: {
-								ambient: 0.6,
-								diffuse: 0.8,
-								fresnel: 0.2,
-								specular: 0.5,
-								roughness: 0.5,
-							},
-							contours: {
-								x: { show: false },
-								y: { show: false },
-								z: { show: true, usecolormap: true, project: { z: false } },
-							},
-						},
-					]}
-					layout={{
-						autosize: true,
-						width: 800,
-						height: 600,
-						scene: {
-							camera: {
-								eye: { x: 1.5, y: 1.5, z: 1 },
-								up: { x: 0, y: 0, z: 1 },
-								center: { x: 0, y: 0, z: 0 },
-							},
-							aspectratio: { x: 1, y: 1, z: 1 },
-							xaxis: { range },
-							yaxis: { range },
-							zaxis: { range },
-						},
-					}}
-					useResizeHandler={true}
-					style={{ width: "100%", height: "100%" }}
-				/>
-			</Box>
-
-			<Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-				Управление: используйте левую кнопку мыши для вращения, правую для
-				перемещения, колесико для масштабирования.
-			</Typography>
+				useResizeHandler={true}
+			/>
 		</Paper>
 	);
 };

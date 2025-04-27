@@ -282,6 +282,7 @@ function App() {
 										{memoizedResults.textMatrix[0].length}
 									</Box>
 								</Grid>
+
 								<Grid item xs={12}>
 									<FrequencyAnalysis data={memoizedResults.frequencyData} />
 								</Grid>

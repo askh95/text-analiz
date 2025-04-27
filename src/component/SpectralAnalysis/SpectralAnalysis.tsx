@@ -16,8 +16,19 @@ export const SpectralAnalysis = ({
 }: SpectralAnalysisProps) => {
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-			<SpectralGraphs data={data} />
-			<CorrelationAnalysis data={data} frequencies={frequencies} />
+			<Box
+				sx={{
+					display: "flex w-full",
+					gap: 2,
+					border: "3px solid blue",
+					borderRadius: 1,
+					p: 2,
+				}}
+			>
+				<SpectralGraphs data={data} />
+				<CorrelationAnalysis data={data} frequencies={frequencies} />
+			</Box>
+
 			<Enhanced3DVisualization data={data} />
 		</Box>
 	);

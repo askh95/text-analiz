@@ -271,7 +271,7 @@ export const TextComparison = ({
 							<Grid item xs={12}>
 								<Box sx={{ mt: 2 }}>
 									<Typography variant="h6" gutterBottom>
-										Уровень идентичности: {(identityLevel * 100).toFixed(2)}%
+										Уровень идентичности: {identityLevel.toFixed(2)}
 									</Typography>
 									<LinearProgress
 										variant="determinate"
