@@ -2,7 +2,6 @@ import { Box } from "@mui/material";
 
 import SpectralGraphs from "./Spectral/SpectralGraphs";
 import { Enhanced3DVisualization } from "./Spectral/Spectral3DVisualization";
-import { CorrelationAnalysis } from "./Spectral/CorrelationAnalysis";
 
 import { FrequencyAnalysis, SpectrumData } from "../../types";
 
@@ -19,14 +18,13 @@ export const SpectralAnalysis = ({
 			<Box
 				sx={{
 					display: "flex w-full",
-					gap: 2,
+					gap: 1,
 					border: "3px solid blue",
 					borderRadius: 1,
 					p: 2,
 				}}
 			>
-				<SpectralGraphs data={data} />
-				<CorrelationAnalysis data={data} frequencies={frequencies} />
+				<SpectralGraphs data={data} frequencies={frequencies} />
 			</Box>
 
 			<Enhanced3DVisualization data={data} />
